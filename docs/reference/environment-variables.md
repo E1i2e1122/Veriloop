@@ -106,6 +106,7 @@ Complete reference for all environment variables used by Veriloop. Configure in 
 | `AGENT_TIMEOUT_SECONDS` | `1800` | No | Default timeout for all agents (30 minutes) |
 | `AGENT_BROWSER_ACTION_TIMEOUT_SECONDS` | `30` | No | Inner Playwright browser action timeout used by MCP click/fill/action calls |
 | `AGENT_BROWSER_TOOL_TIMEOUT_SECONDS` | `45` | No | Outer Veriloop watchdog for browser tool calls made by agent workers |
+| `AGENT_BROWSER_TIMEOUT_ABORT_STREAK` | `3` | No | Browser tool timeouts in a row that end a directly run agent session as a browser failure. A single timeout is returned to the agent so it can try another approach |
 | `AGENT_UNPRODUCTIVE_STREAM_MIN_MESSAGES` | `500` | No | Agent stream health threshold for message count before an output-less stream is flagged as unproductive |
 | `AGENT_UNPRODUCTIVE_STREAM_SECONDS` | `180` | No | Agent stream health threshold for elapsed seconds before an output-less stream is flagged as unproductive |
 | `AUTOPILOT_RUNTIME_PREFLIGHT_TIMEOUT_SECONDS` | `180` | No | Timeout for AutoPilot runtime preflight checks |
