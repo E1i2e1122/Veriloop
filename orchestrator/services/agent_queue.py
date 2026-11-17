@@ -287,6 +287,9 @@ class AgentQueue:
                 self.redis_url,
                 encoding="utf-8",
                 decode_responses=True,
+                # Must exceed the longest BLPOP wait in dequeue_task (default 30s). redis-py 8 defaults
+                # to 5s, which times BLPOP out client-side and can drop a task popped at that moment.
+                socket_timeout=60,
                 retry_on_error=[ConnectionError, TimeoutError],
                 health_check_interval=30,
             )
