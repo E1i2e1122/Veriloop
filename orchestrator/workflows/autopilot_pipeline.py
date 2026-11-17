@@ -69,6 +69,15 @@ async def _worker_managed_browser_slot():
     yield True
 
 
+def runtime_preflight_dir(session_id: str) -> Path:
+    """Absolute folder for the test-generation runtime preflight.
+
+    The preflight agent runs with this folder as its working directory and reads its MCP config
+    from it, so a relative path would resolve twice (runs/<id>/runs/<id>/.mcp.json).
+    """
+    return (Path("runs") / f"{session_id}-runtime-preflight").resolve()
+
+
 def _autopilot_browser_runtime_status() -> dict[str, Any]:
     """Describe the browser runtime that will execute AutoPilot agent tools."""
     try:
@@ -1609,7 +1618,7 @@ The previous pass found many pages but too few meaningful flows. Optimize this p
                     str(runtime.get("runtime_message") or "Playwright browser runtime is unavailable.")
                 )
 
-        preflight_dir = Path("runs") / f"{self.session_id}-runtime-preflight"
+        preflight_dir = runtime_preflight_dir(self.session_id)
         preflight_dir.mkdir(parents=True, exist_ok=True)
         if not errors:
             try:
