@@ -66,6 +66,13 @@ def _secret() -> str:
     return secrets.token_hex(32)
 
 
+def _admin_password() -> str:
+    # The backend only creates the initial admin when the password passes
+    # orchestrator/api/security.py:is_password_strong (upper, lower, digit, special).
+    # "." is one of its special characters and is safe in env files and shell sourcing.
+    return f"{secrets.token_urlsafe(24)}.Aa1"
+
+
 def _set_if_placeholder(values: dict[str, str], key: str, value: str) -> bool:
     if _is_placeholder(values.get(key)):
         values[key] = value
@@ -100,7 +107,8 @@ def main() -> int:
         generated["MINIO_ROOT_PASSWORD"] = values["MINIO_ROOT_PASSWORD"]
     if _set_if_placeholder(values, "JWT_SECRET_KEY", os.environ.get("JWT_SECRET_KEY", _secret())):
         generated["JWT_SECRET_KEY"] = values["JWT_SECRET_KEY"]
-    if _set_if_placeholder(values, "INITIAL_ADMIN_PASSWORD", os.environ.get("INITIAL_ADMIN_PASSWORD", _secret())):
+    admin_password = os.environ.get("INITIAL_ADMIN_PASSWORD", _admin_password())
+    if _set_if_placeholder(values, "INITIAL_ADMIN_PASSWORD", admin_password):
         generated["INITIAL_ADMIN_PASSWORD"] = values["INITIAL_ADMIN_PASSWORD"]
     # Shared secret between the dashboard server and the backend for secret-bearing internal calls.
     if _set_if_placeholder(values, "VERILOOP_INTERNAL_TOKEN", os.environ.get("VERILOOP_INTERNAL_TOKEN", _secret())):
@@ -113,7 +121,7 @@ def main() -> int:
     values.setdefault("POSTGRES_USER", "playwright")
     values.setdefault("POSTGRES_DB", "playwright_agent")
     values.setdefault("MINIO_ROOT_USER", "veriloop-minio")
-    values.setdefault("INITIAL_ADMIN_EMAIL", os.environ.get("INITIAL_ADMIN_EMAIL", "admin@veriloop.local"))
+    _set_if_placeholder(values, "INITIAL_ADMIN_EMAIL", os.environ.get("INITIAL_ADMIN_EMAIL", "admin@veriloop.local"))
     values.setdefault("REQUIRE_AUTH", "true")
     values.setdefault("ALLOW_REGISTRATION", "false")
     values["NEXT_PUBLIC_API_URL"] = ""

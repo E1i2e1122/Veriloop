@@ -449,7 +449,8 @@ services:
 
   # MinIO - Self-hosted S3-compatible object storage for backups
   minio:
-    image: minio/minio:latest
+    # minio/minio is no longer published on Docker Hub or Quay; set MINIO_IMAGE to use another build.
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z}
     restart: unless-stopped
     ports:
       - "${MINIO_API_PORT:-9000}:9000" # API

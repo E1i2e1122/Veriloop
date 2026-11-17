@@ -123,9 +123,12 @@ SH
 RUN groupadd --gid 1000 agent && \
     useradd --create-home --uid 1000 --gid 1000 agent
 
-# Copy and install Python dependencies
+# Copy and install Python dependencies: pinned versions from requirements.lock first
+# (same as the main Dockerfile, so worker images match the backend), then the rest.
+COPY requirements.lock /app/requirements.lock
 COPY orchestrator/requirements.txt /app/orchestrator/
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /app/requirements.lock && \
     pip install --no-cache-dir -r /app/orchestrator/requirements.txt
 
 # Copy and install Node dependencies (for MCP communication)

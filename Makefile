@@ -168,7 +168,7 @@ start:
 	@echo "Company nginx should proxy the public subdomain to frontend :3000 and /websockify to backend :6080."
 	@echo "This target does not start the repo-managed nginx or ZAP security scanner containers."
 	@echo ""
-	@COMPOSE_BAKE=false BUILDX_CONFIG=$(BUILDX_CONFIG) $(PROD_COMPOSE) $(RUNTIME_PROFILES) up -d --build db redis minio
+	@COMPOSE_BAKE=false BUILDX_CONFIG=$(BUILDX_CONFIG) $(PROD_COMPOSE) $(RUNTIME_PROFILES) up -d --wait --build db redis minio
 	@python3 scripts/reconcile_prod_postgres.py
 	@COMPOSE_BAKE=false BUILDX_CONFIG=$(BUILDX_CONFIG) $(PROD_COMPOSE) $(RUNTIME_PROFILES) up -d --build
 	@$(MAKE) agent-runtime-ready
@@ -202,7 +202,7 @@ dev:
 	@echo "Frontend hot reload is enabled. Backend source is mounted, but uvicorn reload is disabled in Docker."
 	@echo "ZAP/security scanning is opt-in: run 'make zap-up' when needed."
 	@echo ""
-	@COMPOSE_BAKE=false BUILDX_CONFIG=$(BUILDX_CONFIG) $(APP_COMPOSE) $(RUNTIME_PROFILES) up -d --build db redis minio
+	@COMPOSE_BAKE=false BUILDX_CONFIG=$(BUILDX_CONFIG) $(APP_COMPOSE) $(RUNTIME_PROFILES) up -d --wait --build db redis minio
 	@python3 scripts/reconcile_prod_postgres.py
 	@$(MAKE) prod-dev-build
 	@COMPOSE_BAKE=false BUILDX_CONFIG=$(BUILDX_CONFIG) $(APP_COMPOSE) $(RUNTIME_PROFILES) up -d
