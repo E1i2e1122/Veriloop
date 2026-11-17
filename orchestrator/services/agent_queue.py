@@ -27,6 +27,8 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
 
+from .redis_per_loop import LoopLocalRedisMixin
+
 try:
     import redis.asyncio as aioredis
 
@@ -213,7 +215,7 @@ class AgentTask:
         )
 
 
-class AgentQueue:
+class AgentQueue(LoopLocalRedisMixin):
     """
     Redis-based queue for agent task execution.
 

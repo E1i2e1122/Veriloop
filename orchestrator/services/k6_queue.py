@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
+from .redis_per_loop import LoopLocalRedisMixin
+
 try:
     import redis.asyncio as aioredis
 
@@ -116,7 +118,7 @@ class K6Task:
         )
 
 
-class K6Queue:
+class K6Queue(LoopLocalRedisMixin):
     """
     Redis-based queue for K6 load test execution.
 
