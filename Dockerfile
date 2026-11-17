@@ -29,6 +29,8 @@ RUN apt-get update && \
         supervisor \
         git \
         unzip \
+        # ps/pgrep for orphaned browser cleanup (orchestrator/utils/browser_cleanup.py)
+        procps \
         # gosu for dropping privileges in entrypoint
         gosu && \
     apt-get clean && \
