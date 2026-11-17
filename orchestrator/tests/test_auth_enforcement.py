@@ -41,6 +41,18 @@ def _gate_app() -> FastAPI:
     def webhook():
         return {"ok": True}
 
+    @app.post("/runs/{run_id}/progress")
+    def run_progress(run_id: str):
+        return {"status": "updated"}
+
+    @app.post("/runs/{run_id}/agentic-summary")
+    def run_agentic_summary(run_id: str):
+        return {"status": "updated"}
+
+    @app.get("/runs/{run_id}/progress")
+    def read_run_progress(run_id: str):
+        return {"stage": "planning"}
+
     app.add_middleware(AuthEnforcementMiddleware)
     return app
 
@@ -177,6 +189,39 @@ def test_runtime_chat_header_only_allowed_in_development(monkeypatch):
     monkeypatch.setattr(auth_settings, "REQUIRE_AUTH", False)
     assert settings_api._internal_chat_caller_allowed("web-chat", None)
     assert not settings_api._internal_chat_caller_allowed(None, None)
+
+
+def test_run_callbacks_accept_the_internal_token(enforced, monkeypatch):
+    monkeypatch.setenv("VERILOOP_INTERNAL_TOKEN", "s3cret")
+    client = TestClient(_gate_app())
+    headers = {"X-Veriloop-Internal-Token": "s3cret"}
+
+    assert client.post("/runs/2026-11-17_15-41-32/progress", headers=headers).status_code == 200
+    assert client.post("/runs/2026-11-17_15-41-32/agentic-summary", headers=headers).status_code == 200
+
+
+def test_run_callbacks_reject_a_missing_or_wrong_internal_token(enforced, monkeypatch):
+    client = TestClient(_gate_app())
+
+    monkeypatch.delenv("VERILOOP_INTERNAL_TOKEN", raising=False)
+    assert client.post("/runs/r1/progress").status_code == 401
+    assert client.post("/runs/r1/progress", headers={"X-Veriloop-Internal-Token": ""}).status_code == 401
+
+    monkeypatch.setenv("VERILOOP_INTERNAL_TOKEN", "s3cret")
+    assert client.post("/runs/r1/progress").status_code == 401
+    assert client.post("/runs/r1/progress", headers={"X-Veriloop-Internal-Token": "wrong"}).status_code == 401
+    non_ascii = {"X-Veriloop-Internal-Token": "s3crét".encode("latin-1")}
+    assert client.post("/runs/r1/progress", headers=non_ascii).status_code == 401
+
+
+def test_internal_token_does_not_open_other_routes(enforced, monkeypatch):
+    monkeypatch.setenv("VERILOOP_INTERNAL_TOKEN", "s3cret")
+    client = TestClient(_gate_app())
+    headers = {"X-Veriloop-Internal-Token": "s3cret"}
+
+    assert client.post("/specs", headers=headers).status_code == 401
+    assert client.get("/specs", headers=headers).status_code == 401
+    assert client.get("/runs/r1/progress", headers=headers).status_code == 401
 
 
 def test_full_app_enforces_auth_on_previously_open_routes(monkeypatch):

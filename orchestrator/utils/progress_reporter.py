@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 API_BASE_URL = os.environ.get("PLAYWRIGHT_AGENT_API_URL", "http://localhost:8001")
 
 
+def _internal_headers() -> dict[str, str]:
+    """Shared-secret header that lets the backend accept these callbacks when it requires auth."""
+    token = os.environ.get("VERILOOP_INTERNAL_TOKEN", "").strip()
+    return {"X-Veriloop-Internal-Token": token} if token else {}
+
+
 class ProgressReporter:
     """
     Reports pipeline progress to the backend API.
@@ -75,6 +81,7 @@ class ProgressReporter:
             response = requests.post(
                 f"{self.api_url}/runs/{self.run_id}/progress",
                 json=payload,
+                headers=_internal_headers(),
                 timeout=5,  # Don't block too long
             )
 
@@ -126,6 +133,7 @@ class ProgressReporter:
             response = requests.post(
                 f"{self.api_url}/runs/{self.run_id}/agentic-summary",
                 json={"summary": summary},
+                headers=_internal_headers(),
                 timeout=5,
             )
 

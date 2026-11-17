@@ -16,7 +16,10 @@ Token sources:
 
 from __future__ import annotations
 
+import hmac
 import logging
+import os
+import re
 from http.cookies import SimpleCookie
 
 from sqlmodel import Session
@@ -49,10 +52,27 @@ PUBLIC_PATHS = frozenset(
 PUBLIC_PREFIXES = ("/health/",)
 SAFE_METHODS = frozenset({"GET", "HEAD"})
 
+# Test-run pipelines report progress from a subprocess that has no user session
+# (orchestrator/utils/progress_reporter.py); they authenticate with the shared
+# VERILOOP_INTERNAL_TOKEN instead, and only for these callbacks.
+INTERNAL_CALLBACK_PATH = re.compile(r"^/runs/[^/]+/(progress|agentic-summary)/?$")
+INTERNAL_TOKEN_HEADER = b"x-veriloop-internal-token"
+
 
 def is_public_path(path: str) -> bool:
     normalized = path.rstrip("/") or "/"
     return normalized in PUBLIC_PATHS or any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES)
+
+
+def is_internal_callback(scope: Scope) -> bool:
+    """True for a run-pipeline callback that carries the shared internal token."""
+    if scope.get("method") != "POST" or not INTERNAL_CALLBACK_PATH.match(scope.get("path", "")):
+        return False
+    expected = os.environ.get("VERILOOP_INTERNAL_TOKEN", "")
+    provided = _header(scope, INTERNAL_TOKEN_HEADER)
+    if not expected or not provided:
+        return False
+    return hmac.compare_digest(provided.encode("latin-1"), expected.encode("utf-8"))
 
 
 def _header(scope: Scope, name: bytes) -> str | None:
@@ -112,6 +132,7 @@ class AuthEnforcementMiddleware:
             or not auth_settings.REQUIRE_AUTH
             or scope.get("method") == "OPTIONS"
             or is_public_path(scope.get("path", ""))
+            or is_internal_callback(scope)
         ):
             await self.app(scope, receive, send)
             return
