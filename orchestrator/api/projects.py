@@ -64,16 +64,16 @@ def _get_code_path_fast(spec_path: Path) -> str | None:
     return None
 
 
-def _count_all_specs_for_project(project_id: str, session: Session) -> int:
-    """Count ALL specs belonging to a project (automated or not).
+def _list_all_specs_for_project(project_id: str, session: Session) -> list[str]:
+    """Names (relative to specs/) of ALL specs belonging to a project (automated or not).
 
-    For the default project, counts specs with NULL project_id or no SpecMetadata.
-    For other projects, counts specs with explicit project_id match.
+    For the default project, lists specs with NULL project_id or no SpecMetadata.
+    For other projects, lists specs with explicit project_id match.
     """
     if not SPECS_DIR.exists():
-        return 0
+        return []
 
-    count = 0
+    names = []
     for f in SPECS_DIR.glob("**/*.md"):
         name = f.relative_to(SPECS_DIR).as_posix()
         if project_id == DEFAULT_PROJECT_ID:
@@ -84,13 +84,18 @@ def _count_all_specs_for_project(project_id: str, session: Session) -> int:
                 )
             ).first()
             if other_project_meta is None:
-                count += 1
+                names.append(name)
         else:
             meta = get_db_spec_metadata(session, name, project_id)
             if meta and meta.project_id == project_id:
-                count += 1
+                names.append(name)
 
-    return count
+    return names
+
+
+def _count_all_specs_for_project(project_id: str, session: Session) -> int:
+    """Count ALL specs belonging to a project (automated or not)."""
+    return len(_list_all_specs_for_project(project_id, session))
 
 
 def _count_automated_specs_for_project(project_id: str, session: Session) -> int:

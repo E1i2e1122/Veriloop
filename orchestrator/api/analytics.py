@@ -23,7 +23,7 @@ from .models_db import TestRun as DBTestRun
 from .models_db import get_or_create_spec_metadata
 from .models_db import get_spec_metadata as get_db_spec_metadata
 from .project_filters import apply_project_filter
-from .projects import _count_all_specs_for_project
+from .projects import _list_all_specs_for_project
 
 try:
     from ..utils.test_counter import get_project_test_count, get_total_test_count
@@ -399,9 +399,12 @@ def get_coverage_overview(
 ):
     # Total specs
     if project_id:
-        total_specs = _count_all_specs_for_project(project_id, session)
+        spec_names = set(_list_all_specs_for_project(project_id, session))
+    elif SPECS_DIR.exists():
+        spec_names = {f.relative_to(SPECS_DIR).as_posix() for f in SPECS_DIR.glob("**/*.md")}
     else:
-        total_specs = len(list(SPECS_DIR.glob("**/*.md"))) if SPECS_DIR.exists() else 0
+        spec_names = set()
+    total_specs = len(spec_names)
 
     # Total test files
     if project_id:
@@ -414,10 +417,11 @@ def get_coverage_overview(
     # Specs with at least one test file (distinct spec_names that have generated tests)
     specs_with_tests = total_test_files
 
-    # Specs run at least once
-    stmt = select(func.count(distinct(DBTestRun.spec_name)))
+    # Specs run at least once. Only count specs in this scope: runs can also exist for API specs,
+    # deleted specs or other folders, which would push run coverage above 100%.
+    stmt = select(distinct(DBTestRun.spec_name))
     stmt = apply_project_filter(stmt, DBTestRun, project_id)
-    specs_run_at_least_once = session.exec(stmt).one() or 0
+    specs_run_at_least_once = len(spec_names.intersection(session.exec(stmt).all()))
 
     run_coverage_percent = round((specs_run_at_least_once / total_specs) * 100, 1) if total_specs > 0 else 0.0
 
