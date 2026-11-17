@@ -1,18 +1,11 @@
 import os
 import sys
-import types
 from pathlib import Path
 
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-browser-memory-tests")
 os.environ.setdefault("REQUIRE_AUTH", "false")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-memory_stub = sys.modules.setdefault("memory", types.ModuleType("memory"))
-memory_stub.__path__ = getattr(memory_stub, "__path__", [])
-memory_manager_stub = types.ModuleType("memory.manager")
-memory_manager_stub.get_memory_manager = lambda *args, **kwargs: None
-sys.modules.setdefault("memory.manager", memory_manager_stub)
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
