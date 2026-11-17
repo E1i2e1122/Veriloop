@@ -1,6 +1,7 @@
 import { generateObject, type LanguageModel } from 'ai';
 import { z } from 'zod';
 import { backendFetch } from './backend-client';
+import { acceptsSamplingParams, supportsNativeStructuredOutput } from './model-capabilities';
 
 export type AssistantIntentName =
   | 'startExplorerAgent'
@@ -93,6 +94,23 @@ const intentSchema = z.object({
 });
 
 type RawIntentRoute = z.infer<typeof intentSchema>;
+
+// Native JSON outputs (used for models that reject forced tool calls, see model-capabilities.ts)
+// accept only closed objects and no numeric ranges, so `input` travels as a JSON string and
+// `confidence` is range-checked after parsing.
+const nativeIntentSchema = intentSchema.extend({
+  confidence: z.number(),
+  input: z.string().default('{}').describe('Tool input as a JSON object string, or "{}" when there is none.'),
+});
+
+function parseInputJson(value: string): Record<string, any> {
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
 
 interface DatabaseConnectionSummary {
   id?: string;
@@ -700,10 +718,10 @@ export async function routeAssistantIntent(ctx: IntentRouterContext): Promise<As
   if (!latestUserText.trim()) return null;
 
   try {
-    const { object } = await generateObject({
+    const modelId = typeof ctx.model === 'string' ? ctx.model : ctx.model.modelId;
+    const request = {
       model: ctx.model,
-      schema: intentSchema,
-      temperature: 0,
+      ...(acceptsSamplingParams(modelId) && { temperature: 0 }),
       maxOutputTokens: 1200,
       system: [
         'You classify Veriloop chatbot requests into structured intents.',
@@ -729,9 +747,26 @@ export async function routeAssistantIntent(ctx: IntentRouterContext): Promise<As
         'Latest user message:',
         latestUserText,
       ].join('\n'),
-    });
+    };
 
-    return normalizeRoute(object, ctx);
+    if (!supportsNativeStructuredOutput(modelId)) {
+      const { object } = await generateObject({ ...request, schema: intentSchema });
+      return normalizeRoute(object, ctx);
+    }
+
+    const { object } = await generateObject({
+      ...request,
+      schema: nativeIntentSchema,
+      // JSON through output_format instead of a forced tool call. Low effort keeps thinking
+      // short: this classification runs before every chat reply.
+      providerOptions: { anthropic: { structuredOutputMode: 'outputFormat', effort: 'low' } },
+    });
+    const route = intentSchema.parse({
+      ...object,
+      confidence: Math.min(1, Math.max(0, object.confidence)),
+      input: parseInputJson(object.input),
+    });
+    return normalizeRoute(route, ctx);
   } catch (error) {
     console.warn('[chat/intent-router] routing skipped:', error);
     return null;
