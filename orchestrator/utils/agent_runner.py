@@ -319,6 +319,23 @@ def _is_browser_tool_name(tool_name: str) -> bool:
     )
 
 
+# Consecutive browser-tool timeouts that end an agent session. A single timeout usually means a
+# wrong locator or an element still covered by a dialog, which the agent can recover from.
+BROWSER_TIMEOUT_ABORT_STREAK = max(1, int(os.environ.get("AGENT_BROWSER_TIMEOUT_ABORT_STREAK", "3") or 3))
+
+
+def _trailing_browser_timeouts(tool_calls: list[Any]) -> int:
+    """Number of browser tool calls at the end of the list that failed with a timeout."""
+    streak = 0
+    for call in reversed(tool_calls):
+        if not _is_browser_tool_name(str(getattr(call, "name", ""))):
+            continue
+        if getattr(call, "success", True) or "timeout" not in str(getattr(call, "error", "") or "").lower():
+            break
+        streak += 1
+    return streak
+
+
 def _has_planner_setup_tool(*tool_sources: Any) -> bool:
     for source in tool_sources:
         if source is None:
@@ -2345,6 +2362,15 @@ class AgentRunner:
                             if tool_result.is_error and "timeout" in result_text.lower()
                             else None,
                         )
+                        if (
+                            browser_failure
+                            and browser_failure.error_type == "browser_tool_timeout"
+                            and _trailing_browser_timeouts(tool_calls) < BROWSER_TIMEOUT_ABORT_STREAK
+                        ):
+                            # A single action timeout (a wrong locator, or an element still covered by
+                            # a dialog) is recoverable: the agent sees the error and tries something else.
+                            # Only repeated timeouts in a row suggest the browser itself has stopped responding.
+                            browser_failure = None
                         if (
                             browser_failure
                             and tool_result.is_error
