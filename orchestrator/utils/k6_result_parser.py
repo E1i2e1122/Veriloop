@@ -105,17 +105,17 @@ def parse_summary(summary_path: str) -> dict[str, Any]:
             if not ok:
                 all_passed = False
     else:
-        # --summary-export format: thresholds inside each metric
-        # e.g. metrics.http_reqs.thresholds = {"rate>2": true}
-        # where true = threshold was crossed (failed)
+        # --summary-export format: thresholds inside each metric. Older k6 versions store a
+        # boolean that is true when the threshold was crossed (failed), e.g. {"rate>2": true};
+        # current versions store the result object, e.g. {"rate>2": {"ok": true}}.
         for metric_name, metric_data in metrics.items():
             if not isinstance(metric_data, dict):
                 continue
             metric_thresholds = metric_data.get("thresholds", {})
             if not isinstance(metric_thresholds, dict):
                 continue
-            for thresh_name, crossed in metric_thresholds.items():
-                ok = not bool(crossed)  # crossed=true means failed
+            for thresh_name, result in metric_thresholds.items():
+                ok = bool(result.get("ok", False)) if isinstance(result, dict) else not bool(result)
                 thresholds[f"{metric_name}{{{thresh_name}}}"] = {"ok": ok}
                 if not ok:
                     all_passed = False
