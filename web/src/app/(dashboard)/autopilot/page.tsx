@@ -3850,7 +3850,8 @@ export default function AutoPilotPage() {
                         ))}
                     </div>
 
-                    {(session.error_message || (session.can_resume && session.resume_reason)) && (
+                    {/* Paused and awaiting-input sessions have their own panels; this one is for failures. */}
+                    {(session.error_message || (session.can_resume && session.resume_reason && !isPaused && !isAwaitingInput)) && (
                         <div className="animate-in stagger-1" style={{
                             ...cardStyle,
                             marginBottom: '1rem',
