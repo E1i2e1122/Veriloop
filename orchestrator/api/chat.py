@@ -495,14 +495,20 @@ async def _generate_ai_title(user_message: str, assistant_message: str = "") -> 
             },
             json={
                 "model": model,
-                "max_tokens": 30,
+                # Headroom for models that think before answering (thinking counts toward max_tokens).
+                "max_tokens": 256,
                 "system": "Generate a concise 5-8 word title for this conversation. Return ONLY the title text, nothing else. No quotes, no punctuation at the end.",
                 "messages": [{"role": "user", "content": content}],
             },
         )
         resp.raise_for_status()
         data = resp.json()
-        title = data["content"][0]["text"].strip().strip("\"'")
+        # Newer models may put a thinking block first; use the first text block.
+        text = next(
+            (block.get("text", "") for block in data.get("content", []) if block.get("type") == "text"),
+            "",
+        )
+        title = text.strip().strip("\"'")
 
         if len(title) < 3 or len(title) > 80:
             raise ValueError(f"Title length out of range: {len(title)}")

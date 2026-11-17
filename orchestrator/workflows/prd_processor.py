@@ -21,7 +21,12 @@ import logging
 
 import httpx
 
-from orchestrator.services.ai_runtime_config import RuntimeAISelection, resolve_model, resolve_runtime_ai_selection
+from orchestrator.services.ai_runtime_config import (
+    RuntimeAISelection,
+    resolve_model,
+    resolve_runtime_ai_selection,
+    sampling_params,
+)
 from orchestrator.utils.string_utils import slugify
 
 logger = logging.getLogger(__name__)
@@ -105,7 +110,7 @@ class _PRDExtractionClient:
             json={
                 "model": self.selection.model,
                 "max_tokens": self.selection.max_tokens,
-                "temperature": self.selection.temperature,
+                **sampling_params(self.selection.model, self.selection.temperature),
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=120,

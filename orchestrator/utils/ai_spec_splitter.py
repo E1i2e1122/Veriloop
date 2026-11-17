@@ -22,6 +22,7 @@ from orchestrator.services.ai_runtime_config import (
     RuntimeAISelection,
     infer_display_provider,
     resolve_runtime_ai_selection,
+    sampling_params,
 )
 
 setup_claude_env()
@@ -338,7 +339,7 @@ print(MARKER + json.dumps(payload, ensure_ascii=False))
             json={
                 "model": selection.model,
                 "max_tokens": selection.max_tokens or 4096,
-                "temperature": 0.0,
+                **sampling_params(selection.model, 0.0),
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=60.0,

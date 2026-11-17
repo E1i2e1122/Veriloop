@@ -55,6 +55,32 @@ ANTHROPIC_COMPATIBLE_KEY_ENV = (
     "ANTHROPIC_API_KEY",
 )
 
+# Claude models from Opus 4.7 / Sonnet 5 / Haiku 5.5 onward reject sampling parameters
+# (temperature, top_p, top_k) with HTTP 400. Older Claude models and other
+# Anthropic-compatible providers (Z.ai GLM, ...) still accept them.
+_NO_SAMPLING_CLAUDE_PREFIXES = (
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-haiku-5",
+    "claude-fable",
+    "claude-mythos",
+)
+
+
+def accepts_sampling_params(model: str | None) -> bool:
+    """Return False for Claude models that reject temperature/top_p/top_k."""
+    name = (model or "").strip().lower().rsplit("/", 1)[-1]
+    return not name.startswith(_NO_SAMPLING_CLAUDE_PREFIXES)
+
+
+def sampling_params(model: str | None, temperature: float | None) -> dict[str, float]:
+    """Request-body sampling fields: ``{"temperature": t}``, or ``{}`` when ``model`` rejects them."""
+    if temperature is None or not accepts_sampling_params(model):
+        return {}
+    return {"temperature": temperature}
+
 
 @dataclass(frozen=True)
 class RuntimeAISelection:
