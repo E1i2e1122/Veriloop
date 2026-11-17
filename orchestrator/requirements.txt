@@ -1,4 +1,6 @@
 claude-agent-sdk==0.2.174
+# tools/agent_note_mcp uses the mcp 1.x API (FastMCP); mcp 2 renamed it to MCPServer.
+mcp>=1.23.0,<2
 jsonschema>=4.0.0
 PyYAML>=6.0.0
 python-dotenv>=1.0.0

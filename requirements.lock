@@ -4,6 +4,7 @@
 
 # Core AI
 claude-agent-sdk==0.2.174
+mcp==1.30.0
 
 # Utilities
 jsonschema==4.26.0
