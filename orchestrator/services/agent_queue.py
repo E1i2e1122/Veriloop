@@ -1355,6 +1355,7 @@ class AgentQueue(LoopLocalRedisMixin):
                 AutonomousMission,
                 AutoPilotSession,
                 BrowserAuthSession,
+                ExplorationSession,
                 PrdGenerationResult,
                 TestRun,
             )
@@ -1385,8 +1386,11 @@ class AgentQueue(LoopLocalRedisMixin):
                         owner = None
                 elif task.owner_type == "browser_auth_session":
                     owner = session.get(BrowserAuthSession, task.owner_id)
+                elif task.owner_type == "exploration_session":
+                    owner = session.get(ExplorationSession, task.owner_id)
                 else:
-                    owner = None
+                    # Unknown owner type: no lifecycle state to check, so do not treat it as missing.
+                    return None
 
                 if not owner:
                     return {

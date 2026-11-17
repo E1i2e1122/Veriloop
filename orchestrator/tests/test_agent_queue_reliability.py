@@ -3433,3 +3433,55 @@ async def test_running_summary_counts_paused_active_owner_as_live():
     assert summaries[0]["owner_terminal"] is False
     assert summaries[0]["live"] is True
     assert summaries[0]["orphaned"] is False
+
+
+def _make_exploration_engine(monkeypatch):
+    from orchestrator.api.models_db import ExplorationSession
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    SQLModel.metadata.create_all(engine, tables=[Project.__table__, ExplorationSession.__table__])
+    monkeypatch.setattr(db_module, "engine", engine)
+    with Session(engine) as session:
+        session.add(ExplorationSession(id="explore_2026-11-17_18-56-38", entry_url="http://demo-shop:3000", status="running"))
+        session.commit()
+    return engine
+
+
+async def _cleanup_single_task(owner_type, owner_id):
+    redis = _MemoryRedis()
+    queue = _MemoryQueue(redis)
+    task = AgentTask(id="agent-owner-check", prompt="explore", status=AgentTaskStatus.QUEUED, owner_type=owner_type, owner_id=owner_id)
+    await redis.hset(queue.TASKS_KEY, task.id, json.dumps(task.to_dict()))
+    await redis.rpush(queue.QUEUE_KEY, task.id)
+    counts = await queue.cleanup_orphaned_and_stale_tasks(max_age_minutes=45)
+    return counts, await queue.get_task(task.id)
+
+
+@pytest.mark.asyncio
+async def test_cleanup_keeps_task_of_a_running_exploration_session(monkeypatch):
+    _make_exploration_engine(monkeypatch)
+
+    counts, task = await _cleanup_single_task("exploration_session", "explore_2026-11-17_18-56-38")
+
+    assert counts["terminal_owner"] == 0
+    assert task.status == AgentTaskStatus.QUEUED
+
+
+@pytest.mark.asyncio
+async def test_cleanup_fails_task_of_a_missing_exploration_session(monkeypatch):
+    _make_exploration_engine(monkeypatch)
+
+    counts, task = await _cleanup_single_task("exploration_session", "explore_does-not-exist")
+
+    assert counts["terminal_owner"] == 1
+    assert task.error == "Agent task stopped because owner exploration_session:explore_does-not-exist is missing"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_keeps_task_with_an_unknown_owner_type(monkeypatch):
+    _make_exploration_engine(monkeypatch)
+
+    counts, task = await _cleanup_single_task("some_future_owner", "owner-1")
+
+    assert counts["terminal_owner"] == 0
+    assert task.status == AgentTaskStatus.QUEUED
