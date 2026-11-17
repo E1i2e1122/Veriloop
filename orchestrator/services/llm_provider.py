@@ -10,6 +10,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from .ai_runtime_config import sampling_params
+
 logger = logging.getLogger(__name__)
 
 # Token pricing per 1M tokens: {model_prefix: (input_per_1m, output_per_1m)}
@@ -141,8 +143,9 @@ class LlmProviderClient:
             response = await client.chat.completions.create(
                 model=self.config.model_id,
                 messages=messages,
-                temperature=temp,
                 max_tokens=max_tok,
+                # Newer Claude models reject temperature, so it is only sent where accepted.
+                **sampling_params(self.config.model_id, temp),
             )
 
             latency_ms = (time.monotonic_ns() // 1_000_000) - start_ms
