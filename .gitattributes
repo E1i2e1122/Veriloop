@@ -1,0 +1,24 @@
+# Store and check out text files with LF line endings so shell scripts,
+# the Makefile, and Docker build inputs work inside Linux containers,
+# even on Windows machines with core.autocrlf=true.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.webm binary
+*.mp4 binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.zip binary
