@@ -211,6 +211,13 @@ def _checks_to_markdown(spec_name: str, checks: list) -> str:
         lines.append(f"**Expect Empty**: {check.get('expect_empty', True)}")
         lines.append("")
         lines.append("```sql")
+        # The spec parser (workflows/db_spec_parser.py) reads each check's name, type and
+        # severity from this comment line; without it every check runs as "check_<n>".
+        meta = [
+            str(check.get(key) or default).replace("|", "/").replace("\n", " ").strip()
+            for key, default in (("check_name", f"check_{i}"), ("check_type", "custom"), ("severity", "medium"))
+        ]
+        lines.append(f"-- check: {meta[0]} | {meta[1]} | {meta[2]}")
         lines.append(check.get("sql_query", "SELECT 1"))
         lines.append("```")
         lines.append("")
