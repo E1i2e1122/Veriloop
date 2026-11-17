@@ -35,6 +35,7 @@ from orchestrator.utils.playwright_mcp import browser_runtime_status, live_brows
 from .db import engine, get_session
 from .middleware.auth import get_current_user_optional
 from .models_db import (
+    AutoPilotAgentAttempt,
     AutoPilotChecklistItem,
     AutoPilotPhase,
     AutoPilotQuestion,
@@ -3164,7 +3165,12 @@ async def delete_session(
     for p in session.exec(stmt).all():
         session.delete(p)
 
-    # 5. Session itself
+    # 5. Checklist items and agent attempts, which also reference the session
+    for model in (AutoPilotChecklistItem, AutoPilotAgentAttempt):
+        for row in session.exec(select(model).where(model.session_id == session_id)).all():
+            session.delete(row)
+
+    # 6. Session itself
     session.delete(ap_session)
     session.commit()
 
