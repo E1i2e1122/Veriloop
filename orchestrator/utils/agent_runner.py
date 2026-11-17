@@ -3411,8 +3411,14 @@ class AgentRunner:
             claude_code_auth_output = (
                 classify_agent_error_type(stripped_output) == CLAUDE_CODE_AUTH_ERROR_TYPE
             )
+            # The output is the agent's own summary. Only scan it for browser-failure phrases when the
+            # session did not end normally (or it is a short error message): a healer that finished
+            # its work and describes the timeout it fixed is not a dead browser session.
+            ended_normally = str(telemetry.get("stop_reason") or "") == "end_turn"
             browser_failure = classify_browser_failure(
-                telemetry.get("last_browser_error") or telemetry.get("error") or output,
+                telemetry.get("last_browser_error")
+                or telemetry.get("error")
+                or (output if has_error_markers or not ended_normally else ""),
                 tool_name=str(telemetry.get("last_tool") or "") or None,
                 error_type=str(telemetry.get("error_type") or "") or None,
             )
