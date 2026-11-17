@@ -1178,7 +1178,8 @@ export default function DiscoveryPage() {
             const res = await fetch(`${API_BASE}/api/agents/runs${projectParam}`);
             if (res.ok) {
                 const data = await res.json();
-                setHistory(data);
+                // The endpoint returns a page ({ items, total, ... }); older backends returned a plain list.
+                setHistory(Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : []);
             }
         } catch (e) { console.error("Failed to fetch history", e); }
     };

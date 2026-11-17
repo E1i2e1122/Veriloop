@@ -520,7 +520,7 @@ async function explorerAgentStatusResponse(
   params.set('limit', '20');
   if (projectId) params.set('project_id', projectId);
 
-  const res = await backendFetch<AgentRunSummary[]>(`/api/agents/runs?${params.toString()}`, {
+  const res = await backendFetch<AgentRunSummary[] | { items?: AgentRunSummary[] }>(`/api/agents/runs?${params.toString()}`, {
     authToken,
     timeoutMs: 10000,
   });
@@ -529,7 +529,8 @@ async function explorerAgentStatusResponse(
     return textToUIMessageResponse(`I checked the real Explorer Agent run history, but the backend returned an error: ${res.error || 'unknown error'}`);
   }
 
-  const runs = Array.isArray(res.data) ? res.data : [];
+  // The endpoint returns a page ({ items, total, ... }); older backends returned a plain list.
+  const runs = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.items) ? res.data.items : [];
   const explorerRuns = runs.filter((run) => run.agent_type === 'exploratory');
   const matchingRuns = intent.targetUrl
     ? explorerRuns.filter((run) => runConfigUrl(run) === intent.targetUrl)
