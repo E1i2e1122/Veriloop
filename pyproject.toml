@@ -13,7 +13,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "claude-agent-sdk==0.2.101",
+    "claude-agent-sdk==0.2.174",
     "jsonschema==4.26.0",
     "PyYAML==6.0.3",
     "python-dotenv==1.2.1",

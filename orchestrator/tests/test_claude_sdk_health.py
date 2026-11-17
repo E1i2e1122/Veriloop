@@ -9,9 +9,9 @@ def test_claude_agent_sdk_dependency_health():
     from claude_agent_sdk import ClaudeAgentOptions
 
     installed = metadata.version("claude-agent-sdk")
-    assert Version(installed) >= Version("0.2.101"), f"installed claude-agent-sdk={installed}"
+    assert Version(installed) >= Version("0.2.174"), f"installed claude-agent-sdk={installed}"
     if getattr(claude_agent_sdk, "__version__", None):
-        assert Version(claude_agent_sdk.__version__) >= Version("0.2.101")
+        assert Version(claude_agent_sdk.__version__) >= Version("0.2.174")
 
     parameters = inspect.signature(ClaudeAgentOptions).parameters
     for option_name in (
